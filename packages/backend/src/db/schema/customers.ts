@@ -1,6 +1,6 @@
 import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { users } from './users.js';
+import { users, accessRoles } from './users.js';
 
 export const customers = sqliteTable('customers', {
   id: text('id').primaryKey(),
@@ -73,6 +73,18 @@ export const communicationHistory = sqliteTable('communication_history', {
     .notNull()
     .references(() => users.id),
   createdAt: text('created_at')
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});
+
+export const customerAccessRoles = sqliteTable('customer_access_roles', {
+  customerId: text('customer_id')
+    .notNull()
+    .references(() => customers.id, { onDelete: 'cascade' }),
+  roleId: text('role_id')
+    .notNull()
+    .references(() => accessRoles.id, { onDelete: 'cascade' }),
+  assignedAt: text('assigned_at')
     .notNull()
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 });

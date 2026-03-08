@@ -28,6 +28,7 @@ export interface CurrentUser {
 export interface UserGroup extends AuditFields {
   id: UUID;
   name: string;
+  mnemonic: string | null;
   description: string | null;
 }
 

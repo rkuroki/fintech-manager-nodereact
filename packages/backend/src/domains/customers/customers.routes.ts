@@ -19,6 +19,17 @@ export async function customersRoutes(fastify: FastifyInstance) {
     },
   });
 
+  // Must be before /:id to avoid route conflict
+  fastify.get('/by-mnemonic/:mnemonic', {
+    preHandler: fastify.requirePermission(PERMISSIONS.CUSTOMERS_READ),
+    schema: { tags: ['Customers'] },
+    handler: async (request) => {
+      const { mnemonic } = request.params as { mnemonic: string };
+      const canReadSensitive = request.user.permissions.includes(PERMISSIONS.CUSTOMERS_READ_SENSITIVE);
+      return service.getCustomerByMnemonic(mnemonic, canReadSensitive, request.writeAudit);
+    },
+  });
+
   fastify.get('/:id', {
     preHandler: fastify.requirePermission(PERMISSIONS.CUSTOMERS_READ),
     schema: { tags: ['Customers'] },
@@ -109,6 +120,25 @@ export async function customersRoutes(fastify: FastifyInstance) {
     },
   });
 
+  fastify.put('/:id/communications/:commId', {
+    preHandler: fastify.requirePermission(PERMISSIONS.COMMUNICATIONS_CREATE),
+    schema: { tags: ['Communications'] },
+    handler: async (request) => {
+      const { id, commId } = request.params as { id: string; commId: string };
+      return service.updateCommunication(id, commId, request.body as never, request.writeAudit);
+    },
+  });
+
+  fastify.delete('/:id/communications/:commId', {
+    preHandler: fastify.requirePermission(PERMISSIONS.COMMUNICATIONS_CREATE),
+    schema: { tags: ['Communications'] },
+    handler: async (request, reply) => {
+      const { id, commId } = request.params as { id: string; commId: string };
+      await service.deleteCommunication(id, commId, request.writeAudit);
+      return reply.status(204).send();
+    },
+  });
+
   // Documents
   fastify.get('/:id/documents', {
     preHandler: fastify.requirePermission(PERMISSIONS.DOCUMENTS_READ),
@@ -144,6 +174,49 @@ export async function customersRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { id, docId } = request.params as { id: string; docId: string };
       await service.removeDocument(id, docId, request.writeAudit);
+      return reply.status(204).send();
+    },
+  });
+
+  fastify.get('/:id/documents/:docId/download', {
+    preHandler: fastify.requirePermission(PERMISSIONS.DOCUMENTS_READ),
+    schema: { tags: ['Documents'] },
+    handler: async (request, reply) => {
+      const { id, docId } = request.params as { id: string; docId: string };
+      const { doc, stream } = await service.downloadDocument(id, docId);
+      return reply
+        .header('Content-Type', doc.mimeType)
+        .header('Content-Disposition', `attachment; filename="${doc.originalName}"`)
+        .header('Content-Length', doc.sizeBytes)
+        .send(stream);
+    },
+  });
+
+  // Customer Access Roles
+
+  fastify.get('/:id/roles', {
+    preHandler: fastify.requirePermission(PERMISSIONS.CUSTOMERS_READ),
+    schema: { tags: ['Customers'] },
+    handler: async (request) => {
+      const { id } = request.params as { id: string };
+      return service.getCustomerRoles(id);
+    },
+  });
+
+  fastify.put('/:id/roles', {
+    preHandler: fastify.requirePermission(PERMISSIONS.CUSTOMERS_UPDATE),
+    schema: { tags: ['Customers'] },
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+      // Only managers (CUSTOMERS_WRITE_SENSITIVE permission) or admins can edit roles
+      const canManageRoles =
+        request.user.isAdmin ||
+        request.user.permissions.includes(PERMISSIONS.CUSTOMERS_WRITE_SENSITIVE);
+      if (!canManageRoles) {
+        return reply.status(403).send({ statusCode: 403, error: 'Forbidden', message: 'Only managers can edit customer roles' });
+      }
+      const { roleIds } = request.body as { roleIds: string[] };
+      await service.setCustomerRoles(id, roleIds, request.writeAudit);
       return reply.status(204).send();
     },
   });

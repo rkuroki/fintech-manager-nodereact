@@ -178,6 +178,33 @@ export async function getGroupById(id: string): Promise<GroupRow | null> {
   return result[0] ?? null;
 }
 
+export async function getGroupByMnemonic(mnemonic: string): Promise<GroupRow | null> {
+  const db = getDb();
+  const result = await db
+    .select()
+    .from(userGroups)
+    .where(and(eq(userGroups.mnemonic, mnemonic), isNull(userGroups.deletedAt)))
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export async function getGroupsByUserId(userId: string): Promise<GroupRow[]> {
+  const db = getDb();
+  return db
+    .select({
+      id: userGroups.id,
+      name: userGroups.name,
+      mnemonic: userGroups.mnemonic,
+      description: userGroups.description,
+      createdAt: userGroups.createdAt,
+      updatedAt: userGroups.updatedAt,
+      deletedAt: userGroups.deletedAt,
+    })
+    .from(userGroupMembers)
+    .innerJoin(userGroups, eq(userGroupMembers.groupId, userGroups.id))
+    .where(and(eq(userGroupMembers.userId, userId), isNull(userGroups.deletedAt)));
+}
+
 export async function listGroups(opts: { page?: number; pageSize?: number; search?: string }) {
   const db = getDb();
   const { limit, offset, page, pageSize } = parsePagination(opts);

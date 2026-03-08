@@ -1,6 +1,7 @@
-import { eq, and, isNull, like, or, sql } from 'drizzle-orm';
+import { eq, and, isNull, like, or, sql, inArray } from 'drizzle-orm';
 import { getDb } from '../../db/connection.js';
-import { customers, investorProfiles, customerDocuments, communicationHistory } from '../../db/schema/customers.js';
+import { customers, investorProfiles, customerDocuments, communicationHistory, customerAccessRoles } from '../../db/schema/customers.js';
+import { accessRoles, groupAccessRoles, userGroupMembers } from '../../db/schema/users.js';
 import { parsePagination } from '../../utils/pagination.js';
 
 export type CustomerRow = typeof customers.$inferSelect;
@@ -180,4 +181,80 @@ export async function listCommunications(customerId: string, opts: { page?: numb
 export async function insertCommunication(values: typeof communicationHistory.$inferInsert) {
   const db = getDb();
   await db.insert(communicationHistory).values(values);
+}
+
+export async function getCommunicationById(id: string) {
+  const db = getDb();
+  const result = await db
+    .select()
+    .from(communicationHistory)
+    .where(eq(communicationHistory.id, id))
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export async function updateCommunication(id: string, values: Partial<typeof communicationHistory.$inferInsert>) {
+  const db = getDb();
+  await db.update(communicationHistory).set(values).where(eq(communicationHistory.id, id));
+  return getCommunicationById(id);
+}
+
+export async function deleteCommunication(id: string) {
+  const db = getDb();
+  await db.delete(communicationHistory).where(eq(communicationHistory.id, id));
+}
+
+// Customer Access Roles
+
+export async function getCustomerRoles(customerId: string) {
+  const db = getDb();
+  return db
+    .select({
+      roleId: accessRoles.id,
+      roleName: accessRoles.name,
+      roleDescription: accessRoles.description,
+      assignedAt: customerAccessRoles.assignedAt,
+    })
+    .from(customerAccessRoles)
+    .innerJoin(accessRoles, eq(customerAccessRoles.roleId, accessRoles.id))
+    .where(eq(customerAccessRoles.customerId, customerId));
+}
+
+export async function setCustomerRoles(customerId: string, roleIds: string[]) {
+  const db = getDb();
+  // Delete all current assignments
+  await db.delete(customerAccessRoles).where(eq(customerAccessRoles.customerId, customerId));
+  // Insert new assignments
+  if (roleIds.length > 0) {
+    await db.insert(customerAccessRoles).values(
+      roleIds.map((roleId) => ({ customerId, roleId }))
+    );
+  }
+}
+
+export async function addCustomerRoles(customerId: string, roleIds: string[]) {
+  if (roleIds.length === 0) return;
+  const db = getDb();
+  await db
+    .insert(customerAccessRoles)
+    .values(roleIds.map((roleId) => ({ customerId, roleId })))
+    .onConflictDoNothing();
+}
+
+/** Get squad role IDs for a given user (via their group memberships) */
+export async function getSquadRoleIdsForUser(userId: string): Promise<string[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ roleId: groupAccessRoles.roleId })
+    .from(userGroupMembers)
+    .innerJoin(groupAccessRoles, eq(userGroupMembers.groupId, groupAccessRoles.groupId))
+    .innerJoin(accessRoles, eq(groupAccessRoles.roleId, accessRoles.id))
+    .where(
+      and(
+        eq(userGroupMembers.userId, userId),
+        // Squad roles are named SQUAD-*
+        sql`${accessRoles.name} LIKE 'SQUAD-%'`,
+      )
+    );
+  return rows.map((r) => r.roleId);
 }

@@ -1,12 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CreateUserDto, UpdateUserDto, CreateGroupDto, CreateRoleDto } from '@investor-backoffice/shared';
+import type { CreateUserDto, UpdateUserDto, CreateGroupDto, UpdateGroupDto, CreateRoleDto } from '@investor-backoffice/shared';
+import { DEFAULT_USER_PERMISSIONS } from '@investor-backoffice/shared';
 import { hashPassword } from '../../utils/password.js';
 import { ConflictError, NotFoundError } from '../../utils/errors.js';
 import type { WriteAuditParams } from '../../plugins/audit.plugin.js';
 import * as repo from './users.repository.js';
 import { getDb } from '../../db/connection.js';
 import { userGroups, accessRoles, userAccessRoles, groupAccessRoles, userGroupMembers } from '../../db/schema/users.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 type AuditFn = (params: WriteAuditParams) => void;
 
@@ -92,29 +93,81 @@ export async function getUserById(id: string) {
 
 export async function createGroup(dto: CreateGroupDto, writeAudit: AuditFn) {
   const db = getDb();
-  const id = uuidv4();
-  await db.insert(userGroups).values({ id, name: dto.name, description: dto.description ?? null });
-  const group = await repo.getGroupById(id);
+  const mnemonic = dto.mnemonic.toUpperCase();
+
+  const existing = await repo.getGroupByMnemonic(mnemonic);
+  if (existing) throw new ConflictError(`Group mnemonic "${mnemonic}" is already in use`);
+
+  const groupId = uuidv4();
+  await db.insert(userGroups).values({
+    id: groupId,
+    name: dto.name,
+    mnemonic,
+    description: dto.description ?? null,
+  });
+
+  // Auto-create squad role SQUAD-{MNEMONIC}
+  const squadRoleName = `SQUAD-${mnemonic}`;
+  const squadRoleId = uuidv4();
+  await db.insert(accessRoles).values({
+    id: squadRoleId,
+    name: squadRoleName,
+    description: `Squad role for ${dto.name}`,
+    permissions: JSON.stringify(DEFAULT_USER_PERMISSIONS),
+  });
+
+  // Link squad role to group
+  await db.insert(groupAccessRoles).values({ groupId, roleId: squadRoleId });
+
+  const group = await repo.getGroupById(groupId);
   if (!group) throw new Error('Failed to create group');
 
-  writeAudit({ entityType: 'user_group', entityId: id, action: 'CREATE', after: { name: dto.name } });
+  writeAudit({
+    entityType: 'user_group',
+    entityId: groupId,
+    action: 'CREATE',
+    after: { name: dto.name, mnemonic, squadRole: squadRoleName },
+  });
+
   return group;
 }
 
-export async function updateGroup(id: string, dto: Partial<CreateGroupDto>, writeAudit: AuditFn) {
+export async function updateGroup(id: string, dto: UpdateGroupDto, writeAudit: AuditFn) {
   const db = getDb();
   const existing = await repo.getGroupById(id);
   if (!existing || existing.deletedAt) throw new NotFoundError('Group not found');
 
-  const setValues: { name?: string; description?: string | null; updatedAt: string } = {
+  const setValues: Record<string, string | null> = {
     updatedAt: new Date().toISOString(),
   };
-  if (dto.name !== undefined) setValues.name = dto.name;
-  if (dto.description !== undefined) setValues.description = dto.description ?? null;
+  if (dto.name !== undefined) setValues['name'] = dto.name;
+  if (dto.description !== undefined) setValues['description'] = dto.description ?? null;
+
+  if (dto.mnemonic !== undefined && dto.mnemonic !== existing.mnemonic) {
+    const newMnemonic = dto.mnemonic.toUpperCase();
+    const mnemonicConflict = await repo.getGroupByMnemonic(newMnemonic);
+    if (mnemonicConflict && mnemonicConflict.id !== id) {
+      throw new ConflictError(`Group mnemonic "${newMnemonic}" is already in use`);
+    }
+    setValues['mnemonic'] = newMnemonic;
+    if (existing.mnemonic) {
+      await db
+        .update(accessRoles)
+        .set({ name: `SQUAD-${newMnemonic}`, updatedAt: new Date().toISOString() })
+        .where(eq(accessRoles.name, `SQUAD-${existing.mnemonic}`));
+    }
+  }
+
   await db.update(userGroups).set(setValues).where(eq(userGroups.id, id));
   const updated = await repo.getGroupById(id);
 
-  writeAudit({ entityType: 'user_group', entityId: id, action: 'UPDATE', before: { name: existing.name }, after: { name: updated?.name } });
+  writeAudit({
+    entityType: 'user_group',
+    entityId: id,
+    action: 'UPDATE',
+    before: { name: existing.name, mnemonic: existing.mnemonic },
+    after: { name: updated?.name, mnemonic: updated?.mnemonic },
+  });
   return updated;
 }
 
@@ -134,10 +187,9 @@ export async function assignUserToGroup(userId: string, groupId: string) {
 
 export async function removeUserFromGroup(userId: string, groupId: string) {
   const db = getDb();
-  await db.delete(userGroupMembers).where(
-    eq(userGroupMembers.userId, userId)
-  );
-  // More precise deletion would need composite where; simplified here
+  await db
+    .delete(userGroupMembers)
+    .where(and(eq(userGroupMembers.userId, userId), eq(userGroupMembers.groupId, groupId)));
 }
 
 // Roles

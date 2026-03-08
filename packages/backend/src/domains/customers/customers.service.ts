@@ -1,10 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { writeFileSync, unlinkSync, existsSync } from 'fs';
+import { writeFileSync, unlinkSync, existsSync, createReadStream } from 'fs';
 import { join, extname } from 'path';
 import type {
   CreateCustomerDto,
   UpdateCustomerDto,
   CreateCommunicationDto,
+  UpdateCommunicationDto,
   UpdateInvestorProfileDto,
 } from '@investor-backoffice/shared';
 import { NotFoundError } from '../../utils/errors.js';
@@ -86,6 +87,12 @@ export async function createCustomer(
     createdBy: actorId,
     ...sensitive,
   });
+
+  // Auto-assign squad roles from the creating user's groups
+  const squadRoleIds = await repo.getSquadRoleIdsForUser(actorId);
+  if (squadRoleIds.length > 0) {
+    await repo.addCustomerRoles(id, squadRoleIds);
+  }
 
   writeAudit({
     entityType: 'customer',
@@ -317,4 +324,110 @@ export async function removeDocument(
     action: 'DELETE',
     before: { customerId, originalName: doc.originalName },
   });
+}
+
+export async function downloadDocument(customerId: string, documentId: string) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const doc = await repo.getDocument(documentId);
+  if (!doc || doc.customerId !== customerId) throw new NotFoundError('Document not found');
+
+  const filePath = join(config.UPLOADS_PATH, customerId, doc.filename);
+  if (!existsSync(filePath)) throw new NotFoundError('File not found on disk');
+
+  return { doc, stream: createReadStream(filePath) };
+}
+
+// Communication update/delete
+
+export async function updateCommunication(
+  customerId: string,
+  communicationId: string,
+  dto: UpdateCommunicationDto,
+  writeAudit: AuditFn,
+) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const existing = await repo.getCommunicationById(communicationId);
+  if (!existing || existing.customerId !== customerId) throw new NotFoundError('Communication not found');
+
+  const updates: Record<string, string> = {};
+  if (dto.channel !== undefined) updates['channel'] = dto.channel;
+  if (dto.summary !== undefined) updates['summary'] = dto.summary;
+  if (dto.occurredAt !== undefined) updates['occurredAt'] = dto.occurredAt;
+
+  const updated = await repo.updateCommunication(communicationId, updates);
+
+  writeAudit({
+    entityType: 'communication_record',
+    entityId: communicationId,
+    action: 'UPDATE',
+    before: { channel: existing.channel, occurredAt: existing.occurredAt },
+    after: { channel: updated?.channel, occurredAt: updated?.occurredAt },
+  });
+
+  return updated;
+}
+
+export async function deleteCommunication(
+  customerId: string,
+  communicationId: string,
+  writeAudit: AuditFn,
+) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const existing = await repo.getCommunicationById(communicationId);
+  if (!existing || existing.customerId !== customerId) throw new NotFoundError('Communication not found');
+
+  await repo.deleteCommunication(communicationId);
+
+  writeAudit({
+    entityType: 'communication_record',
+    entityId: communicationId,
+    action: 'DELETE',
+    before: { customerId, channel: existing.channel },
+  });
+}
+
+// Customer Access Roles
+
+export async function getCustomerRoles(customerId: string) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+  return repo.getCustomerRoles(customerId);
+}
+
+export async function setCustomerRoles(
+  customerId: string,
+  roleIds: string[],
+  writeAudit: AuditFn,
+) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const before = await repo.getCustomerRoles(customerId);
+  await repo.setCustomerRoles(customerId, roleIds);
+
+  writeAudit({
+    entityType: 'customer',
+    entityId: customerId,
+    action: 'UPDATE',
+    before: { accessRoles: before.map((r) => r.roleName) },
+    after: { accessRoles: roleIds },
+  });
+}
+
+// Get customer by mnemonic
+export async function getCustomerByMnemonic(mnemonic: string, canReadSensitive: boolean, writeAudit: AuditFn) {
+  const row = await repo.getCustomerByMnemonic(mnemonic);
+  if (!row || row.deletedAt) throw new NotFoundError('Customer not found');
+
+  if (canReadSensitive && (row.taxIdEnc || row.dateOfBirthEnc || row.addressEnc || row.bankDetailsEnc)) {
+    writeAudit({ entityType: 'customer', entityId: row.id, action: 'READ_SENSITIVE' });
+  }
+
+  return formatCustomerForResponse(row, canReadSensitive);
 }

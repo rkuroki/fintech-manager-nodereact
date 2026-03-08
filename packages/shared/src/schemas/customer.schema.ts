@@ -33,6 +33,20 @@ export const CreateCommunicationSchema = z.object({
 
 export type CreateCommunicationDto = z.infer<typeof CreateCommunicationSchema>;
 
+export const UpdateCommunicationSchema = z.object({
+  channel: z.enum(['email', 'phone', 'whatsapp', 'meeting', 'other']).optional(),
+  summary: z.string().min(1).max(5000).optional(),
+  occurredAt: z.string().datetime().optional(),
+});
+
+export type UpdateCommunicationDto = z.infer<typeof UpdateCommunicationSchema>;
+
+export const UpdateCustomerRolesSchema = z.object({
+  roleIds: z.array(z.string().uuid()),
+});
+
+export type UpdateCustomerRolesDto = z.infer<typeof UpdateCustomerRolesSchema>;
+
 export const UpdateInvestorProfileSchema = z.object({
   notes: z.string().max(10000).optional().nullable(),
   formResponses: z.record(z.unknown()).optional().nullable(),

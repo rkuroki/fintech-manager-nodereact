@@ -43,6 +43,11 @@ export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
 
 export const CreateGroupSchema = z.object({
   name: z.string().min(2).max(100),
+  mnemonic: z
+    .string()
+    .min(3, 'Mnemonic must be at least 3 characters')
+    .max(12, 'Mnemonic must be at most 12 characters')
+    .regex(/^[A-Z0-9]+$/, 'Mnemonic must be uppercase letters and numbers only'),
   description: z.string().max(500).optional(),
 });
 

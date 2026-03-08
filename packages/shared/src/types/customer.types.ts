@@ -51,3 +51,10 @@ export interface CommunicationRecord {
   recordedBy: UUID;
   createdAt: ISODateString;
 }
+
+export interface CustomerAccessRole {
+  roleId: UUID;
+  roleName: string;
+  roleDescription: string | null;
+  assignedAt: ISODateString;
+}
