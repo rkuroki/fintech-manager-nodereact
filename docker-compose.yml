@@ -22,6 +22,10 @@ services:
       ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
       UPLOADS_PATH: /app/data/uploads
       SEED_DB: "true"
+      # Gmail integration (optional — leave blank to disable)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3001/api/gmail/callback}
     ports:
       - "3001:3001"
     command: npm run dev -w packages/backend

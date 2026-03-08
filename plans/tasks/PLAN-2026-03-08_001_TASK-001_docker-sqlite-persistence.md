@@ -18,10 +18,10 @@ The `docker-compose.yml` already bind-mounts `./data:/app/data`, but:
 ### 2. docker-compose.yml
 No volume change needed — bind-mount `./data:/app/data` already works and persists data across `docker compose stop/start/down/up`.
 
-### 3. DBeaver Connection
+### 3. SQL clients Connection
 The SQLite file path on the host is: `<project-root>/data/dev.db`
 
-DBeaver connects to it as a local SQLite file:
+Any SQL client (like Dbeaver) must be able to connect to this file:
 - Driver: SQLite
 - Path: `C:\Users\renan\workspace\claude\fullstack-js-crud-sample\data\dev.db`
 
@@ -39,4 +39,3 @@ DBeaver connects to it as a local SQLite file:
 ## Verification
 1. `docker compose up -d` → create a customer via UI
 2. `docker compose down` → `docker compose up -d` → customer still exists
-3. Open `data/dev.db` in DBeaver → tables and data visible

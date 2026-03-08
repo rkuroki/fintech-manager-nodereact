@@ -11,6 +11,7 @@ import { usersRoutes } from './domains/users/users.routes.js';
 import { customersRoutes } from './domains/customers/customers.routes.js';
 import { auditRoutes } from './domains/audit/audit.routes.js';
 import { healthRoutes } from './domains/health/health.routes.js';
+import { gmailRoutes } from './domains/gmail/gmail.routes.js';
 import { errorHandler } from './utils/errors.js';
 import { config } from './config.js';
 
@@ -60,6 +61,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(customersRoutes, { prefix: '/api/customers' });
   await app.register(auditRoutes, { prefix: '/api' });
   await app.register(healthRoutes, { prefix: '/api' });
+  await app.register(gmailRoutes, { prefix: '/api/gmail' });
 
   // ─── Production static file serving ─────────────────────────────────────
 

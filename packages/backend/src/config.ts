@@ -11,6 +11,11 @@ const ConfigSchema = z.object({
     .regex(/^[0-9a-f]+$/i, 'ENCRYPTION_KEY must be hexadecimal'),
   UPLOADS_PATH: z.string().default('./data/uploads'),
   SEED_DB: z.coerce.boolean().default(false),
+
+  // Gmail integration (optional — features disabled when not set)
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().optional().default('http://localhost:3001/api/gmail/callback'),
 });
 
 function loadConfig() {
@@ -25,3 +30,8 @@ function loadConfig() {
 
 export const config = loadConfig();
 export type Config = typeof config;
+
+/** Returns true when Google OAuth2 credentials are configured */
+export function isGmailConfigured(): boolean {
+  return !!(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET);
+}

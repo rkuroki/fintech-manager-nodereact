@@ -42,6 +42,10 @@ export const PERMISSIONS = {
   // Audit
   AUDIT_READ: 'audit:read',
   ACTIVITY_READ: 'activity:read',
+
+  // Gmail
+  GMAIL_CONNECT: 'gmail:connect',
+  GMAIL_SYNC: 'gmail:sync',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -68,4 +72,6 @@ export const MANAGER_PERMISSIONS: Permission[] = [
   PERMISSIONS.COMMUNICATIONS_CREATE,
   PERMISSIONS.INVESTOR_PROFILES_UPDATE,
   PERMISSIONS.AUDIT_READ,
+  PERMISSIONS.GMAIL_CONNECT,
+  PERMISSIONS.GMAIL_SYNC,
 ];

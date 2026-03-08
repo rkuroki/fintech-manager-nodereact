@@ -17,6 +17,10 @@ services:
       # Generate ENCRYPTION_KEY: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
       JWT_SECRET: "change-me-in-production-use-at-least-32-random-characters-here!!"
       ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      # Gmail integration (optional — leave blank to disable)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
     ports:
       - "8080:8080"
     restart: unless-stopped
