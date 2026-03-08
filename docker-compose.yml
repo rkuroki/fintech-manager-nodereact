@@ -1,0 +1,46 @@
+# Development environment: hot reload for both frontend and backend
+# Start with: docker-compose up
+# Frontend: http://localhost:5173 (Vite HMR)
+# Backend:  http://localhost:3001
+# API docs: http://localhost:3001/docs
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+      target: backend-dev
+    volumes:
+      - ./packages/backend/src:/app/packages/backend/src   # hot reload
+      - ./packages/shared/src:/app/packages/shared/src     # hot reload
+      - ./data:/app/data                                    # SQLite DB persists
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_PATH: /app/data/dev.db
+      JWT_SECRET: dev-secret-minimum-32-characters-change-in-prod
+      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      UPLOADS_PATH: /app/data/uploads
+      SEED_DB: "true"
+    ports:
+      - "3001:3001"
+    command: npm run dev -w packages/backend
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+      target: frontend-dev
+    volumes:
+      - ./packages/frontend/src:/app/packages/frontend/src  # hot reload
+      - ./packages/shared/src:/app/packages/shared/src      # hot reload
+    environment:
+      # BACKEND_URL uses the Docker service name — vite.config.ts reads this for the dev proxy
+      BACKEND_URL: http://backend:3001
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    command: npm run dev -w packages/frontend
+    restart: unless-stopped

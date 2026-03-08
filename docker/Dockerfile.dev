@@ -1,0 +1,31 @@
+# Development image — used by docker-compose for hot reload
+FROM node:20-alpine AS base
+
+WORKDIR /app
+
+# Build tools required for native modules (better-sqlite3, argon2)
+RUN apk add --no-cache python3 make g++
+
+# Install dependencies first (cached layer)
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+
+RUN npm ci
+
+# Copy all source files
+COPY . .
+
+# Build the shared package so backend and frontend can import from it
+RUN npm run build -w packages/shared
+
+# ─── Backend dev stage ────────────────────────────────────────────────────────
+FROM base AS backend-dev
+EXPOSE 3001
+# CMD is provided by docker-compose to allow override
+
+# ─── Frontend dev stage ───────────────────────────────────────────────────────
+FROM base AS frontend-dev
+EXPOSE 5173
+# CMD is provided by docker-compose to allow override

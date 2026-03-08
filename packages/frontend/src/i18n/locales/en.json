@@ -1,0 +1,81 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "users": "Users",
+    "groups": "Groups",
+    "roles": "Roles",
+    "audit": "Audit Log",
+    "activity": "Activity"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "noData": "No data",
+    "confirm": "Confirm",
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "invalidCredentials": "Invalid email or password",
+    "loginSuccess": "Welcome back, {{name}}!"
+  },
+  "customer": {
+    "singular": "Customer",
+    "plural": "Customers",
+    "mnemonic": "ID",
+    "fullName": "Full Name",
+    "email": "Email",
+    "phone": "Phone",
+    "riskProfile": "Risk Profile",
+    "conservative": "Conservative",
+    "moderate": "Moderate",
+    "aggressive": "Aggressive",
+    "sensitiveData": "Sensitive Data",
+    "taxId": "Tax ID (CPF/CNPJ)",
+    "dateOfBirth": "Date of Birth",
+    "address": "Address",
+    "bankDetails": "Bank Details",
+    "investorNotes": "Investor Notes",
+    "reveal": "Reveal",
+    "hide": "Hide",
+    "masked": "Restricted"
+  },
+  "user": {
+    "singular": "User",
+    "plural": "Users",
+    "email": "Email",
+    "alias": "Alias",
+    "fullName": "Full Name",
+    "mobileNumber": "Mobile Number",
+    "identityId": "CPF",
+    "isAdmin": "Admin",
+    "isActive": "Active",
+    "password": "Password",
+    "confirmPassword": "Confirm Password"
+  },
+  "audit": {
+    "entityType": "Entity Type",
+    "entityId": "Entity ID",
+    "action": "Action",
+    "actionBy": "By",
+    "actionAt": "When",
+    "before": "Before",
+    "after": "After",
+    "CREATE": "Created",
+    "UPDATE": "Updated",
+    "DELETE": "Deleted",
+    "READ_SENSITIVE": "Viewed Sensitive Data"
+  }
+}

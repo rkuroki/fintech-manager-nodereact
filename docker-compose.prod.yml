@@ -1,0 +1,36 @@
+# Production reference configuration
+# Build first: docker build -f docker/Dockerfile -t investor-backoffice:latest .
+# Then run:    docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    image: investor-backoffice:latest
+    volumes:
+      - app_data:/data    # SQLite DB and uploads persist across restarts/upgrades
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_PATH: /data/app.db
+      UPLOADS_PATH: /data/uploads
+      # ⚠️  REQUIRED: Replace with strong random values before deploying to production.
+      # Generate JWT_SECRET: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+      # Generate ENCRYPTION_KEY: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      JWT_SECRET: "change-me-in-production-use-at-least-32-random-characters-here!!"
+      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    # Uncomment to use Docker secrets:
+    # secrets:
+    #   - jwt_secret
+    #   - encryption_key
+
+volumes:
+  app_data:
+    driver: local
+
+# secrets:
+#   jwt_secret:
+#     external: true
+#   encryption_key:
+#     external: true

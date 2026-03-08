@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(item[''text'']\\) for item in data if item.get\\(''type''\\)==''text'']\")",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \":*)",
+      "Bash(npm install)"
+    ]
+  }
+}
