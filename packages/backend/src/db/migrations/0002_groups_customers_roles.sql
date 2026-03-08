@@ -2,7 +2,8 @@
 -- 1. Add mnemonic column to user_groups
 -- 2. Add customer_access_roles junction table
 
-ALTER TABLE user_groups ADD COLUMN mnemonic TEXT UNIQUE;
+ALTER TABLE user_groups ADD COLUMN mnemonic TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_groups_mnemonic ON user_groups(mnemonic);
 
 CREATE TABLE IF NOT EXISTS `customer_access_roles` (
   `customer_id` text NOT NULL REFERENCES `customers`(`id`) ON DELETE CASCADE,

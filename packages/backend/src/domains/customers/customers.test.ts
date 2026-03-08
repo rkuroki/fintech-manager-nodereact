@@ -361,4 +361,167 @@ describe('Customers API', () => {
       expect(res.json<{ status: string }>().status).toBe('ok');
     });
   });
+
+  describe('GET /api/customers/by-mnemonic/:mnemonic', () => {
+    it('returns customer by mnemonic without sensitive data for analyst', async () => {
+      const aToken = adminToken();
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { authorization: `Bearer ${aToken}` },
+        payload: { fullName: 'João da Silva', taxId: '123.456.789-00' },
+      });
+      const { mnemonic } = createRes.json<{ mnemonic: string }>();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/customers/by-mnemonic/${mnemonic}`,
+        headers: { authorization: `Bearer ${analystToken()}` },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<Record<string, unknown>>();
+      expect(body['mnemonic']).toBe(mnemonic);
+      expect(body).not.toHaveProperty('taxId');
+    });
+
+    it('returns 404 for non-existent mnemonic', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/customers/by-mnemonic/NOTEXIST999',
+        headers: { authorization: `Bearer ${analystToken()}` },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('Communication update/delete', () => {
+    it('updates a communication record', async () => {
+      const token = managerToken();
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { fullName: 'Comm Update Client' },
+      });
+      const { id } = createRes.json<{ id: string }>();
+
+      const commRes = await app.inject({
+        method: 'POST',
+        url: `/api/customers/${id}/communications`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { channel: 'email', summary: 'Initial summary', occurredAt: '2024-01-15T10:00:00Z' },
+      });
+      const { id: commId } = commRes.json<{ id: string }>();
+
+      const updateRes = await app.inject({
+        method: 'PUT',
+        url: `/api/customers/${id}/communications/${commId}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { summary: 'Updated summary' },
+      });
+      expect(updateRes.statusCode).toBe(200);
+      expect(updateRes.json<Record<string, unknown>>()['summary']).toBe('Updated summary');
+    });
+
+    it('deletes a communication record', async () => {
+      const token = managerToken();
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { fullName: 'Comm Delete Client' },
+      });
+      const { id } = createRes.json<{ id: string }>();
+
+      const commRes = await app.inject({
+        method: 'POST',
+        url: `/api/customers/${id}/communications`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { channel: 'phone', summary: 'To be deleted', occurredAt: '2024-02-01T09:00:00Z' },
+      });
+      const { id: commId } = commRes.json<{ id: string }>();
+
+      const deleteRes = await app.inject({
+        method: 'DELETE',
+        url: `/api/customers/${id}/communications/${commId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(deleteRes.statusCode).toBe(204);
+    });
+  });
+
+  describe('Customer Roles', () => {
+    it('gets customer roles (initially empty)', async () => {
+      const token = managerToken();
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { fullName: 'Roles Client' },
+      });
+      const { id } = createRes.json<{ id: string }>();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/customers/${id}/roles`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toBeInstanceOf(Array);
+    });
+
+    it('sets customer roles as manager (write_sensitive permission)', async () => {
+      const aToken = adminToken();
+      const mToken = managerToken();
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { authorization: `Bearer ${mToken}` },
+        payload: { fullName: 'Role Assign Client' },
+      });
+      const { id: customerId } = createRes.json<{ id: string }>();
+
+      const roleRes = await app.inject({
+        method: 'POST',
+        url: '/api/users/roles',
+        headers: { authorization: `Bearer ${aToken}` },
+        payload: { name: 'Customer Viewer', permissions: ['customers:read'] },
+      });
+      const { id: roleId } = roleRes.json<{ id: string }>();
+
+      const setRes = await app.inject({
+        method: 'PUT',
+        url: `/api/customers/${customerId}/roles`,
+        headers: { authorization: `Bearer ${mToken}` },
+        payload: { roleIds: [roleId] },
+      });
+      expect(setRes.statusCode).toBe(204);
+    });
+  });
+
+  describe('Documents', () => {
+    it('lists documents for a customer (initially empty)', async () => {
+      const aToken = adminToken();
+      const analToken = analystToken();
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { authorization: `Bearer ${aToken}` },
+        payload: { fullName: 'Docs Client' },
+      });
+      const { id } = createRes.json<{ id: string }>();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/customers/${id}/documents`,
+        headers: { authorization: `Bearer ${analToken}` },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toBeInstanceOf(Array);
+      expect((res.json() as unknown[]).length).toBe(0);
+    });
+  });
 });
