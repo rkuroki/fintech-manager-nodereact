@@ -1,6 +1,6 @@
-import { eq, and, isNull, like, or, sql, inArray } from 'drizzle-orm';
+import { eq, and, isNull, like, or, sql, inArray, desc } from 'drizzle-orm';
 import { getDb } from '../../db/connection.js';
-import { customers, investorProfiles, customerDocuments, communicationHistory, customerAccessRoles } from '../../db/schema/customers.js';
+import { customers, investorProfiles, customerDocuments, communicationHistory, customerAccessRoles, customerNotes } from '../../db/schema/customers.js';
 import { accessRoles, groupAccessRoles, userGroupMembers } from '../../db/schema/users.js';
 import { parsePagination } from '../../utils/pagination.js';
 
@@ -239,6 +239,43 @@ export async function addCustomerRoles(customerId: string, roleIds: string[]) {
     .insert(customerAccessRoles)
     .values(roleIds.map((roleId) => ({ customerId, roleId })))
     .onConflictDoNothing();
+}
+
+// Customer Notes
+
+export async function listNotes(customerId: string) {
+  const db = getDb();
+  return db
+    .select()
+    .from(customerNotes)
+    .where(eq(customerNotes.customerId, customerId))
+    .orderBy(desc(customerNotes.noteDate));
+}
+
+export async function getNoteById(id: string) {
+  const db = getDb();
+  const result = await db.select().from(customerNotes).where(eq(customerNotes.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function insertNote(values: typeof customerNotes.$inferInsert) {
+  const db = getDb();
+  await db.insert(customerNotes).values(values);
+  return getNoteById(values.id as string);
+}
+
+export async function updateNote(id: string, values: Partial<typeof customerNotes.$inferInsert>) {
+  const db = getDb();
+  await db
+    .update(customerNotes)
+    .set({ ...values, updatedAt: new Date().toISOString() })
+    .where(eq(customerNotes.id, id));
+  return getNoteById(id);
+}
+
+export async function deleteNote(id: string) {
+  const db = getDb();
+  await db.delete(customerNotes).where(eq(customerNotes.id, id));
 }
 
 /** Get squad role IDs for a given user (via their group memberships) */

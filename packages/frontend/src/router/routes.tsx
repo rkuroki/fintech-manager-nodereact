@@ -9,7 +9,7 @@ const DashboardPage = lazy(() => import('../pages/Dashboard/DashboardPage.js'));
 const UsersPage = lazy(() => import('../pages/Users/UsersPage.js'));
 const GroupsPage = lazy(() => import('../pages/Groups/GroupsPage.js'));
 const CustomersPage = lazy(() => import('../pages/Customers/CustomersPage.js'));
-const CustomerDetailPage = lazy(() => import('../pages/Customers/CustomerDetailPage.js'));
+const CustomerPage = lazy(() => import('../pages/Customers/CustomerPage.js'));
 const AuditPage = lazy(() => import('../pages/Audit/AuditPage.js'));
 const ActivityPage = lazy(() => import('../pages/Audit/ActivityPage.js'));
 
@@ -54,10 +54,11 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'customers/:id',
+        // Handles both /customers/new and /customers/:mnemonic
+        path: 'customers/:mnemonic',
         element: (
           <Suspense fallback={<Loading />}>
-            <CustomerDetailPage />
+            <CustomerPage />
           </Suspense>
         ),
       },

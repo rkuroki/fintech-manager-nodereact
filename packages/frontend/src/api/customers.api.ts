@@ -7,12 +7,17 @@ import type {
   InvestorProfile,
   CommunicationRecord,
   CustomerDocument,
+  CustomerAccessRole,
+  CustomerNote,
 } from '@investor-backoffice/shared';
 import type {
   CreateCustomerDto,
   UpdateCustomerDto,
   CreateCommunicationDto,
+  UpdateCommunicationDto,
   UpdateInvestorProfileDto,
+  CreateNoteDto,
+  UpdateNoteDto,
 } from '@investor-backoffice/shared';
 
 export const customersApi = {
@@ -21,6 +26,11 @@ export const customersApi = {
 
   get: (id: string): Promise<Customer | CustomerWithSensitive> =>
     apiClient.get<Customer | CustomerWithSensitive>(`/customers/${id}`).then((r) => r.data),
+
+  getByMnemonic: (mnemonic: string): Promise<Customer | CustomerWithSensitive> =>
+    apiClient
+      .get<Customer | CustomerWithSensitive>(`/customers/by-mnemonic/${mnemonic}`)
+      .then((r) => r.data),
 
   create: (dto: CreateCustomerDto): Promise<Customer> =>
     apiClient.post<Customer>('/customers', dto).then((r) => r.data),
@@ -59,6 +69,20 @@ export const customersApi = {
       .post<CommunicationRecord>(`/customers/${customerId}/communications`, dto)
       .then((r) => r.data),
 
+  updateCommunication: (
+    customerId: string,
+    commId: string,
+    dto: UpdateCommunicationDto,
+  ): Promise<CommunicationRecord> =>
+    apiClient
+      .put<CommunicationRecord>(`/customers/${customerId}/communications/${commId}`, dto)
+      .then((r) => r.data),
+
+  deleteCommunication: (customerId: string, commId: string): Promise<void> =>
+    apiClient
+      .delete(`/customers/${customerId}/communications/${commId}`)
+      .then(() => undefined),
+
   // Documents
   listDocuments: (customerId: string): Promise<CustomerDocument[]> =>
     apiClient.get<CustomerDocument[]>(`/customers/${customerId}/documents`).then((r) => r.data),
@@ -75,4 +99,31 @@ export const customersApi = {
 
   deleteDocument: (customerId: string, documentId: string): Promise<void> =>
     apiClient.delete(`/customers/${customerId}/documents/${documentId}`).then(() => undefined),
+
+  downloadDocument: (customerId: string, documentId: string): Promise<Blob> =>
+    apiClient
+      .get(`/customers/${customerId}/documents/${documentId}/download`, { responseType: 'blob' })
+      .then((r) => r.data as Blob),
+
+  // Access Roles
+  listRoles: (customerId: string): Promise<CustomerAccessRole[]> =>
+    apiClient.get<CustomerAccessRole[]>(`/customers/${customerId}/roles`).then((r) => r.data),
+
+  updateRoles: (customerId: string, roleIds: string[]): Promise<void> =>
+    apiClient.put(`/customers/${customerId}/roles`, { roleIds }).then(() => undefined),
+
+  // Notes
+  listNotes: (customerId: string): Promise<CustomerNote[]> =>
+    apiClient.get<CustomerNote[]>(`/customers/${customerId}/notes`).then((r) => r.data),
+
+  createNote: (customerId: string, dto: CreateNoteDto): Promise<CustomerNote> =>
+    apiClient.post<CustomerNote>(`/customers/${customerId}/notes`, dto).then((r) => r.data),
+
+  updateNote: (customerId: string, noteId: string, dto: UpdateNoteDto): Promise<CustomerNote> =>
+    apiClient
+      .put<CustomerNote>(`/customers/${customerId}/notes/${noteId}`, dto)
+      .then((r) => r.data),
+
+  deleteNote: (customerId: string, noteId: string): Promise<void> =>
+    apiClient.delete(`/customers/${customerId}/notes/${noteId}`).then(() => undefined),
 };

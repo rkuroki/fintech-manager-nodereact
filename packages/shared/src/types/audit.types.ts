@@ -9,7 +9,8 @@ export type AuditEntityType =
   | 'customer'
   | 'investor_profile'
   | 'customer_document'
-  | 'communication_record';
+  | 'communication_record'
+  | 'customer_note';
 
 export interface AuditLogEntry {
   id: UUID;

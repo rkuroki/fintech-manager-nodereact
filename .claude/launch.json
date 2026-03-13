@@ -4,13 +4,24 @@
     {
       "name": "backend",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file=packages/backend/.env", "node_modules/tsx/dist/cli.mjs", "watch", "--clear-screen=false", "packages/backend/src/server.ts"],
+      "runtimeArgs": [
+        "--env-file=packages/backend/.env",
+        "node_modules/tsx/dist/cli.mjs",
+        "watch",
+        "--clear-screen=false",
+        "packages/backend/src/server.ts"
+      ],
       "port": 3001
     },
     {
       "name": "frontend",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "packages/frontend", "--host", "0.0.0.0"],
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "packages/frontend",
+        "--host",
+        "0.0.0.0"
+      ],
       "port": 5173
     }
   ]

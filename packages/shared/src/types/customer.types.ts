@@ -58,3 +58,13 @@ export interface CustomerAccessRole {
   roleDescription: string | null;
   assignedAt: ISODateString;
 }
+
+export interface CustomerNote {
+  id: UUID;
+  customerId: UUID;
+  content: string;
+  noteDate: ISODateString;
+  createdBy: UUID;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}

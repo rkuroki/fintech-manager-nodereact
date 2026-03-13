@@ -220,4 +220,44 @@ export async function customersRoutes(fastify: FastifyInstance) {
       return reply.status(204).send();
     },
   });
+
+  // Customer Notes
+
+  fastify.get('/:id/notes', {
+    preHandler: fastify.requirePermission(PERMISSIONS.INVESTOR_PROFILES_READ),
+    schema: { tags: ['Notes'] },
+    handler: async (request) => {
+      const { id } = request.params as { id: string };
+      return service.listNotes(id);
+    },
+  });
+
+  fastify.post('/:id/notes', {
+    preHandler: fastify.requirePermission(PERMISSIONS.INVESTOR_PROFILES_UPDATE),
+    schema: { tags: ['Notes'] },
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const note = await service.createNote(id, request.body as never, request.user.id, request.writeAudit);
+      return reply.status(201).send(note);
+    },
+  });
+
+  fastify.put('/:id/notes/:noteId', {
+    preHandler: fastify.requirePermission(PERMISSIONS.INVESTOR_PROFILES_UPDATE),
+    schema: { tags: ['Notes'] },
+    handler: async (request) => {
+      const { id, noteId } = request.params as { id: string; noteId: string };
+      return service.updateNote(id, noteId, request.body as never, request.writeAudit);
+    },
+  });
+
+  fastify.delete('/:id/notes/:noteId', {
+    preHandler: fastify.requirePermission(PERMISSIONS.INVESTOR_PROFILES_UPDATE),
+    schema: { tags: ['Notes'] },
+    handler: async (request, reply) => {
+      const { id, noteId } = request.params as { id: string; noteId: string };
+      await service.deleteNote(id, noteId, request.writeAudit);
+      return reply.status(204).send();
+    },
+  });
 }

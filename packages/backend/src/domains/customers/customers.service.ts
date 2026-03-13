@@ -7,6 +7,8 @@ import type {
   CreateCommunicationDto,
   UpdateCommunicationDto,
   UpdateInvestorProfileDto,
+  CreateNoteDto,
+  UpdateNoteDto,
 } from '@investor-backoffice/shared';
 import { NotFoundError } from '../../utils/errors.js';
 import { encryptIfPresent, decryptIfPresent } from '../../utils/crypto.js';
@@ -418,6 +420,52 @@ export async function setCustomerRoles(
     before: { accessRoles: before.map((r) => r.roleName) },
     after: { accessRoles: roleIds },
   });
+}
+
+// Customer Notes
+
+export async function listNotes(customerId: string) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+  return repo.listNotes(customerId);
+}
+
+export async function createNote(customerId: string, dto: CreateNoteDto, actorId: string, writeAudit: AuditFn) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const id = uuidv4();
+  const note = await repo.insertNote({ id, customerId, content: dto.content, noteDate: dto.noteDate, createdBy: actorId });
+
+  writeAudit({ entityType: 'customer_note', entityId: id, action: 'CREATE', after: { customerId } });
+  return note;
+}
+
+export async function updateNote(customerId: string, noteId: string, dto: UpdateNoteDto, writeAudit: AuditFn) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const existing = await repo.getNoteById(noteId);
+  if (!existing || existing.customerId !== customerId) throw new NotFoundError('Note not found');
+
+  const updates: Record<string, string> = {};
+  if (dto.content !== undefined) updates['content'] = dto.content;
+  if (dto.noteDate !== undefined) updates['noteDate'] = dto.noteDate;
+
+  const updated = await repo.updateNote(noteId, updates);
+  writeAudit({ entityType: 'customer_note', entityId: noteId, action: 'UPDATE' });
+  return updated;
+}
+
+export async function deleteNote(customerId: string, noteId: string, writeAudit: AuditFn) {
+  const customer = await repo.getCustomerById(customerId);
+  if (!customer || customer.deletedAt) throw new NotFoundError('Customer not found');
+
+  const existing = await repo.getNoteById(noteId);
+  if (!existing || existing.customerId !== customerId) throw new NotFoundError('Note not found');
+
+  await repo.deleteNote(noteId);
+  writeAudit({ entityType: 'customer_note', entityId: noteId, action: 'DELETE' });
 }
 
 // Get customer by mnemonic

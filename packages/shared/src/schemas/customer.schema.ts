@@ -53,3 +53,13 @@ export const UpdateInvestorProfileSchema = z.object({
 });
 
 export type UpdateInvestorProfileDto = z.infer<typeof UpdateInvestorProfileSchema>;
+
+export const CreateNoteSchema = z.object({
+  content: z.string().min(1, 'Content is required').max(10000),
+  noteDate: z.string().datetime(),
+});
+
+export type CreateNoteDto = z.infer<typeof CreateNoteSchema>;
+
+export const UpdateNoteSchema = CreateNoteSchema.partial();
+export type UpdateNoteDto = z.infer<typeof UpdateNoteSchema>;

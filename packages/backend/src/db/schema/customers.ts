@@ -88,3 +88,21 @@ export const customerAccessRoles = sqliteTable('customer_access_roles', {
     .notNull()
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 });
+
+export const customerNotes = sqliteTable('customer_notes', {
+  id: text('id').primaryKey(),
+  customerId: text('customer_id')
+    .notNull()
+    .references(() => customers.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  noteDate: text('note_date').notNull(),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});

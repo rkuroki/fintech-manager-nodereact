@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { ProTable, type ProColumns, type ActionType } from '@ant-design/pro-components';
 import { Button, Tag, App, Space } from 'antd';
 import { PlusOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -9,7 +9,6 @@ import { PERMISSIONS } from '@investor-backoffice/shared';
 import { customersApi } from '../../api/customers.api.js';
 import { useAuthStore } from '../../store/auth.store.js';
 import { confirm } from '../../components/common/ConfirmModal.js';
-import { CustomerFormDrawer } from './CustomerFormDrawer.js';
 
 const riskProfileColor = {
   conservative: 'blue',
@@ -19,7 +18,6 @@ const riskProfileColor = {
 
 export default function CustomersPage() {
   const tableRef = useRef<ActionType>();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const { hasPermission } = useAuthStore();
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -80,7 +78,7 @@ export default function CustomersPage() {
             type="link"
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/customers/${record.id}`)}
+            onClick={() => navigate(`/customers/${record.mnemonic}`)}
           />
           {canDelete && (
             <Button
@@ -104,46 +102,35 @@ export default function CustomersPage() {
   ];
 
   return (
-    <>
-      <ProTable<Customer>
-        actionRef={tableRef}
-        headerTitle="Customers"
-        columns={columns}
-        rowKey="id"
-        scroll={{ x: 800 }}
-        request={async (params) => {
-          const result = await customersApi.list({
-            page: params.current,
-            pageSize: params.pageSize,
-            search: params.keyword,
-          });
-          return { data: result.data, total: result.total, success: true };
-        }}
-        search={{ labelWidth: 'auto' }}
-        toolbar={{
-          actions: canCreate
-            ? [
-                <Button
-                  key="create"
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setDrawerOpen(true)}
-                >
-                  New Customer
-                </Button>,
-              ]
-            : [],
-        }}
-      />
-
-      <CustomerFormDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onSuccess={() => {
-          setDrawerOpen(false);
-          tableRef.current?.reload();
-        }}
-      />
-    </>
+    <ProTable<Customer>
+      actionRef={tableRef}
+      headerTitle="Customers"
+      columns={columns}
+      rowKey="id"
+      scroll={{ x: 800 }}
+      request={async (params) => {
+        const result = await customersApi.list({
+          page: params.current,
+          pageSize: params.pageSize,
+          search: params.keyword,
+        });
+        return { data: result.data, total: result.total, success: true };
+      }}
+      search={{ labelWidth: 'auto' }}
+      toolbar={{
+        actions: canCreate
+          ? [
+              <Button
+                key="create"
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => navigate('/customers/new')}
+              >
+                New Customer
+              </Button>,
+            ]
+          : [],
+      }}
+    />
   );
 }

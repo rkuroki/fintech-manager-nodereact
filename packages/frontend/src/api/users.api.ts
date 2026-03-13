@@ -1,5 +1,5 @@
 import { apiClient } from './client.js';
-import type { User, PaginatedResponse, PaginationParams } from '@investor-backoffice/shared';
+import type { User, PaginatedResponse, PaginationParams, AccessRole } from '@investor-backoffice/shared';
 import type { CreateUserDto, UpdateUserDto } from '@investor-backoffice/shared';
 
 export const usersApi = {
@@ -17,4 +17,7 @@ export const usersApi = {
 
   remove: (id: string): Promise<void> =>
     apiClient.delete(`/users/${id}`).then(() => undefined),
+
+  listRoles: (): Promise<AccessRole[]> =>
+    apiClient.get<AccessRole[]>('/users/roles').then((r) => r.data),
 };
